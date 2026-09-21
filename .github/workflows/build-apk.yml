@@ -25,14 +25,14 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Install Android packages + symlink
+      -       - name: Set up Android SDK
         run: |
-          yes | sdkmanager "platforms;android-34" "build-tools;34.0.0"
+          SDK="$ANDROID_SDK_ROOT"
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;34.0.0"
           sudo mkdir -p /opt/android-sdk
-          sudo ln -s $ANDROID_SDK_ROOT/* /opt/android-sdk/
+          sudo ln -s "$SDK"/* /opt/android-sdk/
+          echo "/opt/android-sdk/build-tools/34.0.0" >> $GITHUB_PATH
+
 
       - name: Create debug keystore
         run: |
