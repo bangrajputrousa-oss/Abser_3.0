@@ -13,6 +13,10 @@ mkdir -p /tmp/android-build/assets
 cp android/app/src/main/java/com/absher/individual/MainActivity.java /tmp/android-build/src/com/absher/individual/MainActivity.java
 cp android/app/src/main/AndroidManifest.xml /tmp/android-build/AndroidManifest.xml
 
+# Copy Android resources
+mkdir -p /tmp/android-build/res/values
+cp android/app/src/main/res/values/strings.xml /tmp/android-build/res/values/strings.xml
+
 rm -rf /tmp/android-build/assets/*
 cp -r dist/* /tmp/android-build/assets/
 rm -rf /tmp/android-build/assets/download
