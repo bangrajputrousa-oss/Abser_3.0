@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="absherGreen" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#008744" />
+      <stop offset="100%" stop-color="#005a2e" />
+    </linearGradient>
+    <filter id="dropGlow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.45" />
+    </filter>
+  </defs>
+  <!-- Background with rounded squircle -->
+  <rect width="512" height="512" rx="112" fill="url(#absherGreen)" />
+  <!-- Inner circular glow -->
+  <circle cx="256" cy="256" r="185" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="6" />
+  <!-- Inner decorative crest circle -->
+  <circle cx="256" cy="256" r="160" fill="rgba(0, 0, 0, 0.15)" filter="url(#dropGlow)" />
+  <!-- Arabic Calligraphy "أبشر" (Absher) in stylized vector paths -->
+  <g fill="#ffffff" transform="matrix(1.05 0 0 1.05 -12 -10)">
+    <!-- Main emblem text -->
+    <text x="256" y="295" font-family="'Cairo', 'Segoe UI', Arial, sans-serif" font-size="140" font-weight="900" text-anchor="middle" fill="#ffffff" letter-spacing="2">أبشر</text>
+    <!-- Subtitle badge -->
+    <text x="256" y="348" font-family="'Cairo', 'Segoe UI', Arial, sans-serif" font-size="28" font-weight="700" text-anchor="middle" fill="#a7f3d0" letter-spacing="4">INDIVIDUAL · أفراد</text>
+  </g>
+</svg>

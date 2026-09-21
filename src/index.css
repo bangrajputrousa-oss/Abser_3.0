@@ -1,0 +1,24 @@
+@import "tailwindcss";
+
+@layer base {
+  html, body {
+    font-family: 'Roboto', 'Cairo', system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background-color: #211F1F;
+    color: #ffffff;
+    touch-action: pan-x pan-y;
+    user-select: none;
+    -webkit-user-select: none;
+    overflow-x: hidden;
+  }
+
+  /* Font settings specified by user:
+     Main headings: Roboto Regular / Medium
+     Large bold text: Roboto Bold
+     Body text: Roboto Regular
+     Labels: Roboto Medium
+     Numbers: Roboto Regular/Medium
+  */
+  h1, h2, h3 {
+    font-family: 'Roboto', 'Cairo', sans-serif;
+  }
+}

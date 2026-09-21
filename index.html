@@ -1,0 +1,86 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Absher Digital ID & Documents</title>
+    <meta name="description" content="Native offline Android digital documents and identity management app with comprehensive control panel and device storage." />
+    <meta property="og:title" content="Absher Digital ID & Documents" />
+    <meta property="og:description" content="Native offline Android digital documents and identity management app with comprehensive control panel and device storage." />
+    <meta property="og:type" content="website" />
+    <meta name="theme-color" content="#006837" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Absher" />
+    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500;700&family=Cairo:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      (function() {
+        window.__APP_START_TIME__ = Date.now();
+        window.__APP_LOGS__ = [];
+        function recordLog(level, msg, stack) {
+          var entry = { time: Date.now() - window.__APP_START_TIME__, level: level, msg: String(msg), stack: stack || '' };
+          window.__APP_LOGS__.push(entry);
+          if (window.AndroidDiagnostics && window.AndroidDiagnostics.log) {
+            window.AndroidDiagnostics.log(level, 'WebClient', msg + (stack ? ' | ' + stack : ''));
+          }
+        }
+        var origLog = console.log, origWarn = console.warn, origError = console.error;
+        console.log = function() { recordLog('INFO', Array.from(arguments).join(' ')); origLog.apply(console, arguments); };
+        console.warn = function() { recordLog('WARN', Array.from(arguments).join(' ')); origWarn.apply(console, arguments); };
+        console.error = function() { recordLog('ERROR', Array.from(arguments).join(' ')); origError.apply(console, arguments); };
+
+        window.addEventListener('error', function(e) {
+          var details = (e.message || e.error) + ' at ' + (e.filename || 'unknown') + ':' + (e.lineno || 0);
+          recordLog('ERROR', 'Uncaught error: ' + details, e.error ? e.error.stack : '');
+          if (window.AndroidDiagnostics && window.AndroidDiagnostics.reportError) {
+            window.AndroidDiagnostics.reportError(details, e.error ? e.error.stack : '');
+          }
+        });
+
+        window.addEventListener('unhandledrejection', function(e) {
+          var reason = e.reason && (e.reason.message || e.reason);
+          recordLog('ERROR', 'Unhandled rejection: ' + reason, e.reason && e.reason.stack ? e.reason.stack : '');
+          if (window.AndroidDiagnostics && window.AndroidDiagnostics.reportError) {
+            window.AndroidDiagnostics.reportError(String(reason), e.reason && e.reason.stack ? e.reason.stack : '');
+          }
+        });
+
+        // Startup watchdog: if root is empty after 4.5s, display diagnostics
+        setTimeout(function() {
+          var root = document.getElementById('root');
+          if (!root || !root.hasChildNodes() || root.children.length === 0) {
+            var diag = document.createElement('div');
+            diag.id = 'startup-diagnostic-banner';
+            diag.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:#131416;color:#e6edf3;padding:24px;font-family:monospace;font-size:13px;z-index:999999;overflow-y:auto;box-sizing:border-box;display:flex;flex-direction:column;gap:16px;';
+            var errorLogs = window.__APP_LOGS__.filter(function(l) { return l.level === 'ERROR'; });
+            diag.innerHTML = '<div style="background:#dc2626;color:#fff;padding:12px 16px;border-radius:8px;font-weight:bold;font-size:15px;">' +
+              'Startup Notice: React UI Did Not Mount Within 4.5s</div>' +
+              '<div style="background:#1e2228;padding:12px;border-radius:8px;border:1px solid #30363d;">' +
+              '<div><strong>URL:</strong> ' + window.location.href + '</div>' +
+              '<div><strong>UserAgent:</strong> ' + navigator.userAgent + '</div>' +
+              '<div><strong>AndroidBridge:</strong> ' + (window.AndroidDiagnostics ? 'Available' : 'Unavailable') + '</div>' +
+              '</div>' +
+              '<div style="background:#1e2228;padding:12px;border-radius:8px;border:1px solid #30363d;">' +
+              '<strong>Recent Diagnostics & Errors (' + window.__APP_LOGS__.length + ' entries):</strong>' +
+              '<pre style="margin-top:8px;white-space:pre-wrap;word-break:break-all;color:' + (errorLogs.length ? '#f87171' : '#9ca3af') + ';">' +
+              (window.__APP_LOGS__.map(function(l) { return '[' + l.time + 'ms][' + l.level + '] ' + l.msg; }).join('\n') || 'No errors logged.') +
+              '</pre></div>' +
+              '<button onclick="window.location.reload()" style="background:#006837;color:#fff;border:none;padding:12px;border-radius:8px;font-weight:bold;cursor:pointer;">Reload Application</button>';
+            document.body.appendChild(diag);
+          }
+        }, 4500);
+      })();
+    </script>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
+
