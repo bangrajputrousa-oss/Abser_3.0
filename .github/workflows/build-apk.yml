@@ -25,7 +25,7 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      -       - name: Set up Android SDK
+      - name: Set up Android SDK
         run: |
           SDK="$ANDROID_SDK_ROOT"
           yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" "platforms;android-34" "build-tools;34.0.0"
