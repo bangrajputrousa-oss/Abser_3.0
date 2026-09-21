@@ -1,0 +1,53 @@
+name: Build Android APK
+
+on:
+  push:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android packages + symlink
+        run: |
+          yes | sdkmanager "platforms;android-34" "build-tools;34.0.0"
+          sudo mkdir -p /opt/android-sdk
+          sudo ln -s $ANDROID_SDK_ROOT/* /opt/android-sdk/
+
+      - name: Create debug keystore
+        run: |
+          keytool -genkeypair -v \
+            -keystore /tmp/debug.keystore \
+            -storepass android -keypass android \
+            -alias androiddebugkey -keyalg RSA -keysize 2048 \
+            -validity 10000 \
+            -dname "CN=Android Debug,O=Android,C=US"
+
+      - name: Build APK
+        run: bash scripts/build-apk.sh
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug
+          path: APK_DOWNLOAD/app-debug.apk
