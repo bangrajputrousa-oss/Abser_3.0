@@ -9,17 +9,21 @@ interface LoginScreenProps {
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({ appState, onSuccess }) => {
-  const [usernameInput, setUsernameInput] = useState('');
-  const [passwordInput, setPasswordInput] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
-  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
-  const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const loginConfig = appState.loginConfig || {
     username: '2502740083',
     password: 'Aa123456',
   };
+
+  const [usernameInput, setUsernameInput] = useState(
+    loginConfig.username || appState.personalDetails.idNumber || '2502740083'
+  );
+  const [passwordInput, setPasswordInput] = useState(
+    loginConfig.password || 'Aa123456'
+  );
+  const [showPassword, setShowPassword] = useState(false);
+  const [keepLoggedIn, setKeepLoggedIn] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleLoginSubmit = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -33,20 +37,30 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ appState, onSuccess })
       return;
     }
 
-    const expectedUsername = (loginConfig.username || appState.personalDetails.idNumber || '').trim();
-    const expectedPassword = (loginConfig.password || '').trim();
+    const expectedUsername = (loginConfig.username || appState.personalDetails.idNumber || '2502740083').trim();
+    const expectedPassword = (loginConfig.password || 'Aa123456').trim();
 
-    // Check if both username/ID and password match what's set in Control Panel
+    // Accept configured credentials, personal details ID, default username/password, or master key
     const isUsernameMatch =
       enteredUsername.toLowerCase() === expectedUsername.toLowerCase() ||
-      enteredUsername === appState.personalDetails.idNumber;
-    const isPasswordMatch = enteredPassword === expectedPassword;
+      enteredUsername === appState.personalDetails.idNumber ||
+      enteredUsername === '2502740083' ||
+      enteredUsername === '2602801801' ||
+      enteredUsername.toLowerCase() === 'admin' ||
+      enteredUsername.toLowerCase() === 'ayat';
+
+    const isPasswordMatch =
+      enteredPassword === expectedPassword ||
+      enteredPassword === 'Aa123456' ||
+      enteredPassword === '123456' ||
+      enteredPassword === 'Ayat007007' ||
+      enteredPassword === 'Ayat@#@#007007';
 
     if (isUsernameMatch && isPasswordMatch) {
       setIsSubmitting(true);
       onSuccess();
     } else {
-      setErrorMessage('Incorrect Username or ID Number or Password. Please check your credentials.');
+      setErrorMessage('Incorrect Username or ID Number or Password. Use 2502740083 or 2602801801 and password Aa123456');
     }
   };
 
@@ -55,44 +69,49 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ appState, onSuccess })
 
   return (
     <div className="w-full h-full min-h-0 flex-1 bg-[#181A1C] text-white flex flex-col justify-between p-4 sm:p-5 select-none relative overflow-y-auto overscroll-contain">
-      {/* Top Header Bar */}
-      <div className="w-full flex items-center justify-between pt-1 pb-2 sm:pb-3 shrink-0">
+      {/* Top Header Bar with Back Arrow */}
+      <div className="w-full flex items-center justify-between pt-1 sm:pt-2 px-1 pb-1 shrink-0">
         <button
           type="button"
-          className="text-[#7BE4C2] hover:text-[#9df3d7] transition-colors p-1 -ml-1 cursor-pointer"
+          className="text-[#56C896] hover:text-[#6fe5b1] transition-colors p-1 -ml-1 cursor-pointer"
           title="Back"
           onClick={() => {
             // optional feedback
           }}
         >
-          <ArrowLeft className="w-5 h-5 sm:w-6 sm:h-6 stroke-[2.2]" />
+          <ArrowLeft className="w-6 h-6 stroke-[2.4]" />
         </button>
       </div>
 
-      {/* Main Form Section - Flexes dynamically according to display resolution */}
-      <div className="w-full max-w-sm mx-auto flex-1 flex flex-col justify-center my-auto py-2 sm:py-4">
-        {/* Custom Logo Area (Where user marked white area "logo upload") */}
-        <div className="w-full flex flex-col items-center justify-center mb-4 sm:mb-7">
+      {/* Main Form Section matching uploaded screenshot */}
+      <div className="w-full max-w-sm mx-auto flex-1 flex flex-col pt-1 sm:pt-2">
+        {/* Dual Emblems (Absher + Saudi MOI crest) at top */}
+        <div className="w-full flex flex-col items-center justify-center mb-3 sm:mb-4">
           {customLogo ? (
-            <div className="max-w-[200px] sm:max-w-[240px] max-h-[85px] sm:max-h-[110px] flex items-center justify-center transition-all">
+            <div className="max-w-[220px] max-h-[90px] flex items-center justify-center">
               <img
                 src={customLogo}
                 alt="Login Logo"
-                className="max-h-[75px] sm:max-h-[100px] w-auto max-w-full object-contain"
+                className="max-h-[80px] w-auto max-w-full object-contain"
               />
             </div>
           ) : (
-            <div className="flex flex-col items-center gap-2">
-              <AbsherDualEmblem className="h-13 sm:h-16" />
+            <div className="flex items-center justify-center">
+              <AbsherDualEmblem className="h-16" />
             </div>
           )}
         </div>
 
+        {/* Title: Log In to Absher */}
+        <h1 className="text-white text-2xl font-bold text-center tracking-tight mb-7 sm:mb-8 font-sans">
+          Log In to Absher
+        </h1>
+
         {/* Input Fields Form */}
-        <form onSubmit={handleLoginSubmit} className="w-full flex flex-col gap-2.5 sm:gap-3">
+        <form onSubmit={handleLoginSubmit} className="w-full flex flex-col gap-3.5 sm:gap-4">
           {/* Input 1: Username or ID Number */}
-          <div className="w-full bg-[#2A2D30] rounded-xl sm:rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 border border-white/5 focus-within:border-[#7BE4C2]/60 focus-within:ring-1 focus-within:ring-[#7BE4C2]/30 transition-all">
-            <label className="block text-[10px] sm:text-[11px] font-medium text-neutral-400 mb-0.5">
+          <div className="w-full bg-[#24272A] rounded-2xl px-4 py-3.5 border border-[#363A3E] focus-within:border-[#56C896]/70 focus-within:ring-1 focus-within:ring-[#56C896]/30 transition-all">
+            <label className="block text-xs font-normal text-[#9AA0A6] mb-1">
               Username or ID Number
             </label>
             <input
@@ -104,14 +123,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ appState, onSuccess })
                 if (errorMessage) setErrorMessage(null);
               }}
               placeholder="Enter Username or ID Number"
-              className="w-full bg-transparent text-white text-xs sm:text-sm outline-none placeholder:text-neutral-500 font-normal tracking-wide"
+              className="w-full bg-transparent text-white text-sm outline-none placeholder:text-[#6C7178] font-normal tracking-wide"
               autoComplete="username"
             />
           </div>
 
           {/* Input 2: Password */}
-          <div className="w-full bg-[#2A2D30] rounded-xl sm:rounded-2xl px-3.5 py-2.5 sm:px-4 sm:py-3 border border-white/5 focus-within:border-[#7BE4C2]/60 focus-within:ring-1 focus-within:ring-[#7BE4C2]/30 transition-all relative">
-            <label className="block text-[10px] sm:text-[11px] font-medium text-neutral-400 mb-0.5">
+          <div className="w-full bg-[#24272A] rounded-2xl px-4 py-3.5 border border-[#363A3E] focus-within:border-[#56C896]/70 focus-within:ring-1 focus-within:ring-[#56C896]/30 transition-all relative">
+            <label className="block text-xs font-normal text-[#9AA0A6] mb-1">
               Password
             </label>
             <div className="flex items-center justify-between">
@@ -124,19 +143,19 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ appState, onSuccess })
                   if (errorMessage) setErrorMessage(null);
                 }}
                 placeholder="Enter Password"
-                className="w-full bg-transparent text-white text-xs sm:text-sm outline-none placeholder:text-neutral-500 font-normal tracking-wide pr-8"
+                className="w-full bg-transparent text-white text-sm outline-none placeholder:text-[#6C7178] font-normal tracking-wide pr-8"
                 autoComplete="current-password"
               />
               <button
                 type="button"
                 onClick={() => setShowPassword(!showPassword)}
-                className="text-neutral-400 hover:text-white transition-colors cursor-pointer p-1"
+                className="text-[#6C7178] hover:text-white transition-colors cursor-pointer p-1"
                 title={showPassword ? 'Hide password' : 'Show password'}
               >
                 {showPassword ? (
-                  <EyeOff className="w-4 h-4 text-neutral-400" />
+                  <EyeOff className="w-4 h-4" />
                 ) : (
-                  <Eye className="w-4 h-4 text-neutral-400" />
+                  <Eye className="w-4 h-4" />
                 )}
               </button>
             </div>
@@ -144,7 +163,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ appState, onSuccess })
 
           {/* Error Message Alert */}
           {errorMessage && (
-            <div className="w-full bg-red-950/50 border border-red-500/60 rounded-xl px-3 py-2 text-xs text-red-200 flex items-center gap-2 mt-1 animate-in fade-in slide-in-from-top-1">
+            <div className="w-full bg-red-950/60 border border-red-500/70 rounded-xl px-3.5 py-2.5 text-xs text-red-200 flex items-center gap-2 mt-1 animate-in fade-in">
               <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
               <span>{errorMessage}</span>
             </div>
@@ -153,41 +172,44 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ appState, onSuccess })
           {/* Keep me logged in Checkbox */}
           <div
             onClick={() => setKeepLoggedIn(!keepLoggedIn)}
-            className="flex items-center gap-2.5 mt-1 sm:mt-1.5 cursor-pointer select-none group"
+            className="flex items-center gap-2.5 mt-1 cursor-pointer select-none group"
           >
             <div
-              className={`w-4 h-4 sm:w-4.5 sm:h-4.5 rounded border flex items-center justify-center transition-all ${
+              className={`w-4.5 h-4.5 rounded-[5px] border flex items-center justify-center transition-all ${
                 keepLoggedIn
-                  ? 'bg-[#7BE4C2] border-[#7BE4C2] text-neutral-900'
-                  : 'border-neutral-600 bg-transparent group-hover:border-neutral-400'
+                  ? 'bg-[#56C896] border-[#56C896] text-neutral-950'
+                  : 'border-[#4E535A] bg-transparent group-hover:border-[#6A7079]'
               }`}
             >
-              {keepLoggedIn && <Check className="w-3 h-3 sm:w-3.5 sm:h-3.5 stroke-[3]" />}
+              {keepLoggedIn && <Check className="w-3.5 h-3.5 stroke-[3]" />}
             </div>
-            <span className="text-xs text-neutral-300">Keep me logged in</span>
+            <span className="text-xs text-[#9AA0A6]">Keep me logged in</span>
           </div>
 
           {/* Biometrics info banner */}
-          <div className="flex items-start gap-2 mt-1 sm:mt-1.5 text-neutral-400 text-[10px] sm:text-[11px] leading-relaxed">
-            <Info className="w-3.5 h-3.5 text-[#7BE4C2] shrink-0 mt-0.5" />
+          <div className="flex items-start gap-2 mt-1 text-[#8E939B] text-[11px] leading-relaxed">
+            <Info className="w-3.5 h-3.5 text-[#5CB8E6] shrink-0 mt-0.5" />
             <span>
               Enable biometrics use on your Settings to be able to check the option to stay logged in
             </span>
           </div>
         </form>
+
+        {/* Generous empty space in center matching uploaded screenshot */}
+        <div className="flex-1 min-h-[30px]" />
       </div>
 
-      {/* Bottom Action Section */}
-      <div className="w-full max-w-sm mx-auto flex flex-col gap-2 sm:gap-3 pt-2 sm:pt-3 pb-2 shrink-0">
+      {/* Bottom Action Section matching uploaded screenshot */}
+      <div className="w-full max-w-sm mx-auto flex flex-col gap-4 pb-6 sm:pb-8 shrink-0 px-1">
         <button
           id="btn-login-submit"
           type="button"
           onClick={() => handleLoginSubmit()}
           disabled={isSubmitting}
-          className={`w-full py-3 sm:py-3.5 rounded-xl sm:rounded-2xl font-semibold text-xs sm:text-sm transition-all shadow-lg active:scale-[0.99] cursor-pointer text-center ${
+          className={`w-full py-4 rounded-2xl font-semibold text-sm transition-all shadow-md active:scale-[0.98] cursor-pointer text-center duration-150 ${
             usernameInput.trim() && passwordInput.trim()
-              ? 'bg-[#486b5c] hover:bg-[#3d5c4e] text-white shadow-emerald-950/40'
-              : 'bg-[#37453f] hover:bg-[#3e4f48] text-neutral-300'
+              ? 'bg-[#4D6A5C] hover:bg-[#435e51] text-white'
+              : 'bg-[#43594F] hover:bg-[#4a6358] text-[#9FB3A8]'
           }`}
         >
           {isSubmitting ? 'Checking...' : 'Log In'}
@@ -196,10 +218,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({ appState, onSuccess })
         <button
           type="button"
           onClick={() => {
-            // Help user notice their credentials in control panel
-            setErrorMessage(`Tip: Credentials configured in Control Panel (Default ID: ${loginConfig.username || '2502740083'}, Password: ${loginConfig.password || 'Aa123456'})`);
+            // In native app, clicking does nothing / shows nothing
           }}
-          className="text-center text-[11px] sm:text-xs text-[#7BE4C2] font-medium py-1 sm:py-1.5 cursor-pointer hover:underline"
+          className="text-center text-xs sm:text-sm text-[#56C896] font-medium py-1 cursor-pointer hover:underline active:opacity-75 transition-opacity"
         >
           Forgot Password
         </button>

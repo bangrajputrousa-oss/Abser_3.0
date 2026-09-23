@@ -61,7 +61,6 @@ export type ScreenType =
   | 'resident_id'
   | 'license'
   | 'visa'
-  | 'control_panel'
   | 'services'
   | 'family'
   | 'workers'

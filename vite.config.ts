@@ -10,6 +10,35 @@ export default defineConfig(() => {
     plugins: [
       react(),
       tailwindcss(),
+      {
+        name: 'apk-binary-server',
+        configureServer(server) {
+          server.middlewares.use((req, res, next) => {
+            if (req.url && (req.url === '/download/app-debug.apk' || req.url.endsWith('app-debug.apk'))) {
+              try {
+                const fs = require('fs');
+                const apkPath = path.resolve(__dirname, 'public/download/app-debug.apk');
+                if (fs.existsSync(apkPath)) {
+                  const stat = fs.statSync(apkPath);
+                  res.writeHead(200, {
+                    'Content-Type': 'application/vnd.android.package-archive',
+                    'Content-Disposition': 'attachment; filename="app-debug.apk"',
+                    'Content-Length': stat.size,
+                    'Cache-Control': 'no-store, no-cache, must-revalidate',
+                    'Access-Control-Allow-Origin': '*',
+                  });
+                  const readStream = fs.createReadStream(apkPath);
+                  readStream.pipe(res);
+                  return;
+                }
+              } catch (e) {
+                console.error('APK stream error:', e);
+              }
+            }
+            next();
+          });
+        },
+      },
       VitePWA({
         registerType: 'autoUpdate',
         includeAssets: ['favicon.ico', 'apple-touch-icon.png', 'icon.svg'],

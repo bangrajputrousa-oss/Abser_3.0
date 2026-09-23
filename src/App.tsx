@@ -19,8 +19,6 @@ import { ServicesScreen } from './components/ServicesScreen';
 import { FamilyScreen } from './components/FamilyScreen';
 import { WorkersScreen } from './components/WorkersScreen';
 import { OtherScreen } from './components/OtherScreen';
-import { ControlPanelScreen } from './components/ControlPanelScreen';
-import { ControlPanelLockModal } from './components/ControlPanelLockModal';
 import { AuthFlowManager } from './components/AuthFlowManager';
 import { CheckCircle2, AlertCircle } from 'lucide-react';
 
@@ -30,8 +28,31 @@ export default function App() {
   const [currentScreen, setCurrentScreen] = useState<ScreenType>('home');
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [toastMessage, setToastMessage] = useState<string | null>(null);
-  const [showLockModal, setShowLockModal] = useState(false);
+  const [isOffline, setIsOffline] = useState<boolean>(typeof navigator !== 'undefined' ? !navigator.onLine : false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // Continuous synchronization to device offline storage
+  useEffect(() => {
+    saveAppState(appState);
+  }, [appState]);
+
+  // Offline / Online network listener
+  useEffect(() => {
+    const handleOnline = () => {
+      setIsOffline(false);
+      showToast('Network connected — Offline database in sync');
+    };
+    const handleOffline = () => {
+      setIsOffline(true);
+      showToast('Offline Mode — 100% synchronized from device cache');
+    };
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+    };
+  }, []);
 
   // Show Toast notification helper
   const showToast = (msg: string) => {
@@ -57,27 +78,14 @@ export default function App() {
     }
   };
 
-  // Navigation handler with strict lock enforcement for Control Panel
+  // Navigation handler
   const handleNavigate = (screen: ScreenType) => {
-    if (screen === 'control_panel') {
-      setShowLockModal(true);
-      return;
-    }
     setCurrentScreen(screen);
-  };
-
-  // Unlocked callback
-  const handleControlPanelUnlocked = () => {
-    setShowLockModal(false);
-    setCurrentScreen('control_panel');
-    showToast('Control panel unlocked successfully');
   };
 
   // Back handler
   const handleBack = () => {
-    if (currentScreen === 'control_panel') {
-      setCurrentScreen(activeTab === 'home' ? 'home' : activeTab);
-    } else if (
+    if (
       currentScreen === 'personal_details' ||
       currentScreen === 'passport' ||
       currentScreen === 'resident_id' ||
@@ -91,13 +99,6 @@ export default function App() {
       setCurrentScreen('home');
       setActiveTab('home');
     }
-  };
-
-  // Save changes from Control Panel
-  const handleSaveState = (newState: AppState) => {
-    setAppState(newState);
-    saveAppState(newState);
-    showToast('Changes saved to device storage!');
   };
 
   // Export to Android Device File Manager
@@ -247,21 +248,6 @@ export default function App() {
                   }}
                 />
               )}
-
-              {currentScreen === 'control_panel' && (
-                <ControlPanelScreen
-                  appState={appState}
-                  onSave={handleSaveState}
-                  onBack={handleBack}
-                  onExportBackup={handleExportBackup}
-                  onImportBackup={handleTriggerImport}
-                  onResetDefaults={handleResetDefaults}
-                  onLogout={() => {
-                    setIsAuthenticated(false);
-                    showToast('Locked to Login Screen');
-                  }}
-                />
-              )}
             </>
           )}
         </main>
@@ -276,13 +262,6 @@ export default function App() {
           <div className="w-32 h-1 bg-neutral-600 rounded-full" />
         </div>
       </div>
-
-      {/* Control Panel Security Lock Modal */}
-      <ControlPanelLockModal
-        isOpen={showLockModal}
-        onSuccess={handleControlPanelUnlocked}
-        onCancel={() => setShowLockModal(false)}
-      />
 
       {/* Toast Notification */}
       {toastMessage && (

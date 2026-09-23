@@ -1,24 +1,30 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
-  <defs>
-    <linearGradient id="absherGreen" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#008744" />
-      <stop offset="100%" stop-color="#005a2e" />
-    </linearGradient>
-    <filter id="dropGlow" x="-20%" y="-20%" width="140%" height="140%">
-      <feDropShadow dx="0" dy="8" stdDeviation="12" flood-color="#000000" flood-opacity="0.45" />
-    </filter>
-  </defs>
-  <!-- Background with rounded squircle -->
-  <rect width="512" height="512" rx="112" fill="url(#absherGreen)" />
-  <!-- Inner circular glow -->
-  <circle cx="256" cy="256" r="185" fill="none" stroke="rgba(255, 255, 255, 0.2)" stroke-width="6" />
-  <!-- Inner decorative crest circle -->
-  <circle cx="256" cy="256" r="160" fill="rgba(0, 0, 0, 0.15)" filter="url(#dropGlow)" />
-  <!-- Arabic Calligraphy "أبشر" (Absher) in stylized vector paths -->
-  <g fill="#ffffff" transform="matrix(1.05 0 0 1.05 -12 -10)">
-    <!-- Main emblem text -->
-    <text x="256" y="295" font-family="'Cairo', 'Segoe UI', Arial, sans-serif" font-size="140" font-weight="900" text-anchor="middle" fill="#ffffff" letter-spacing="2">أبشر</text>
-    <!-- Subtitle badge -->
-    <text x="256" y="348" font-family="'Cairo', 'Segoe UI', Arial, sans-serif" font-size="28" font-weight="700" text-anchor="middle" fill="#a7f3d0" letter-spacing="4">INDIVIDUAL · أفراد</text>
+  <!-- White squircle background matching uploaded image -->
+  <rect width="512" height="512" rx="100" fill="#ffffff" />
+  
+  <!-- Absher Green Logo elements -->
+  <g fill="#0B5D36">
+    <!-- 3 upper dots for the letter sheen (ش) -->
+    <circle cx="196" cy="140" r="17" />
+    <circle cx="248" cy="140" r="17" />
+    <circle cx="300" cy="140" r="17" />
+
+    <!-- Bar 1 (leftmost, letter raa ر extending downward) -->
+    <rect x="126" y="174" width="36" height="268" rx="18" />
+
+    <!-- Bar 2 -->
+    <rect x="178" y="174" width="36" height="212" rx="18" />
+
+    <!-- Bar 3 -->
+    <rect x="230" y="174" width="36" height="212" rx="18" />
+
+    <!-- Bar 4 (under letter baa ب) -->
+    <rect x="282" y="174" width="36" height="212" rx="18" />
+
+    <!-- Bar 5 (rightmost, tall Alif أ with angled calligraphic top) -->
+    <path d="M 334,124 C 334,106 350,92 368,90 L 370,90 L 370,368 C 370,378 362,386 352,386 C 342,386 334,378 334,368 Z" />
+
+    <!-- Bottom single dot for the letter baa (ب) -->
+    <circle cx="300" cy="424" r="17" />
   </g>
 </svg>

@@ -52,7 +52,7 @@ export const BottomNavBar: React.FC<BottomNavBarProps> = ({
             key={tab.id}
             id={`nav-tab-${tab.id}`}
             onClick={() => onTabChange(tab.id)}
-            className="flex flex-col items-center justify-center flex-1 py-1 cursor-pointer transition-colors"
+            className="flex flex-col items-center justify-center flex-1 py-1 cursor-pointer transition-all active:scale-90 duration-150"
           >
             <Icon
               className={`w-5 h-5 mb-1 transition-transform ${

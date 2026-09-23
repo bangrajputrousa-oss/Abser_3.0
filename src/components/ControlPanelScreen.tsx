@@ -1,8 +1,29 @@
 import React, { useState, useRef } from 'react';
-import { ArrowLeft, Upload, Trash2, Plus, Check, KeyRound, Download, FolderOpen, RotateCcw, Lock, LogOut, ShieldCheck } from 'lucide-react';
+import {
+  ArrowLeft,
+  Upload,
+  Trash2,
+  Plus,
+  Check,
+  KeyRound,
+  Download,
+  FolderOpen,
+  RotateCcw,
+  Lock,
+  LogOut,
+  ShieldCheck,
+  Eye,
+  X,
+  Loader2,
+  Image as ImageIcon,
+  FileCheck,
+  CheckCircle2,
+} from 'lucide-react';
 import { AppState, DocumentItem, LoginConfig } from '../types';
 import { setStoredPassword, getStoredPassword } from './ControlPanelLockModal';
 import { AbsherDualEmblem } from './AbsherBrandIcons';
+import { compressImage } from '../utils/imageCompressor';
+import { EMBEDDED_APK_BASE64 } from '../utils/apkData';
 
 interface ControlPanelScreenProps {
   appState: AppState;
@@ -41,6 +62,11 @@ export const ControlPanelScreen: React.FC<ControlPanelScreenProps> = ({
   const [newPassword, setNewPassword] = useState('');
   const [passwordSuccess, setPasswordSuccess] = useState(false);
 
+  // Document upload state and full-view modal
+  const [uploadingDocId, setUploadingDocId] = useState<string | null>(null);
+  const [previewModalImage, setPreviewModalImage] = useState<{ src: string; title: string } | null>(null);
+  const [dragOverDocId, setDragOverDocId] = useState<string | null>(null);
+
   // Hidden file input refs
   const logoInputRef = useRef<HTMLInputElement>(null);
   const loginLogoInputRef = useRef<HTMLInputElement>(null);
@@ -75,19 +101,27 @@ export const ControlPanelScreen: React.FC<ControlPanelScreenProps> = ({
   };
 
   const handleDocumentChange = (id: string, field: keyof DocumentItem, value: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      documents: prev.documents.map((doc) =>
-        doc.id === id ? { ...doc, [field]: value } : doc
-      ),
-    }));
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        documents: prev.documents.map((doc) =>
+          doc.id === id ? { ...doc, [field]: value } : doc
+        ),
+      };
+      onSave(updated);
+      return updated;
+    });
   };
 
   const handleDeleteDocument = (id: string) => {
-    setFormData((prev) => ({
-      ...prev,
-      documents: prev.documents.filter((doc) => doc.id !== id),
-    }));
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        documents: prev.documents.filter((doc) => doc.id !== id),
+      };
+      onSave(updated);
+      return updated;
+    });
   };
 
   const handleAddDocument = () => {
@@ -100,27 +134,79 @@ export const ControlPanelScreen: React.FC<ControlPanelScreenProps> = ({
       expiry: '-',
       type: 'custom',
     };
-    setFormData((prev) => ({
-      ...prev,
-      documents: [...prev.documents, newDoc],
-    }));
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        documents: [...prev.documents, newDoc],
+      };
+      onSave(updated);
+      return updated;
+    });
     setNewDocTitle('');
   };
 
-  // Generic image upload helper
-  const handleImageUpload = (
+  // Compressed Image upload helper for single visual components
+  const handleImageUpload = async (
     e: React.ChangeEvent<HTMLInputElement>,
-    callback: (base64: string) => void
+    callback: (base64: string) => void,
+    onComplete?: (optimized: string) => void
   ) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (typeof reader.result === 'string') {
-        callback(reader.result);
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const compressed = await compressImage(file, 1280, 1280, 0.82);
+      callback(compressed);
+      if (onComplete) onComplete(compressed);
+    } catch (err) {
+      console.error('Image compression failed:', err);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        if (typeof reader.result === 'string') {
+          callback(reader.result);
+          if (onComplete) onComplete(reader.result);
+        }
+      };
+      reader.readAsDataURL(file);
+    } finally {
+      e.target.value = '';
+    }
+  };
+
+  // Dedicated robust document image upload with auto-compression, persistent offline save, and feedback
+  const processAndSaveDocImage = async (docId: string, file: File) => {
+    setUploadingDocId(docId);
+    try {
+      const compressed = await compressImage(file, 1280, 1280, 0.82);
+      setFormData((prev) => {
+        const updated = {
+          ...prev,
+          documents: prev.documents.map((d) =>
+            d.id === docId ? { ...d, image: compressed } : d
+          ),
+        };
+        onSave(updated);
+        return updated;
+      });
+      setSaveSuccess(true);
+      setTimeout(() => setSaveSuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to compress document image:', err);
+    } finally {
+      setUploadingDocId(null);
+    }
+  };
+
+  const handleRemoveDocImage = (docId: string) => {
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        documents: prev.documents.map((d) =>
+          d.id === docId ? { ...d, image: undefined } : d
+        ),
+      };
+      onSave(updated);
+      return updated;
+    });
   };
 
   const handleSaveChanges = () => {
@@ -257,12 +343,16 @@ export const ControlPanelScreen: React.FC<ControlPanelScreenProps> = ({
               accept="image/*"
               className="hidden"
               onChange={(e) =>
-                handleImageUpload(e, (base64) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    visuals: { ...prev.visuals, headerLogo: base64 },
-                  }))
-                )
+                handleImageUpload(e, (base64) => {
+                  const updated = {
+                    ...formData,
+                    visuals: { ...formData.visuals, headerLogo: base64 },
+                  };
+                  setFormData(updated);
+                  onSave(updated);
+                  setSaveSuccess(true);
+                  setTimeout(() => setSaveSuccess(false), 2000);
+                })
               }
             />
 
@@ -276,12 +366,16 @@ export const ControlPanelScreen: React.FC<ControlPanelScreenProps> = ({
               </button>
               {formData.visuals.headerLogo && (
                 <button
-                  onClick={() =>
-                    setFormData((prev) => ({
-                      ...prev,
-                      visuals: { ...prev.visuals, headerLogo: '' },
-                    }))
-                  }
+                  onClick={() => {
+                    const updated = {
+                      ...formData,
+                      visuals: { ...formData.visuals, headerLogo: '' },
+                    };
+                    setFormData(updated);
+                    onSave(updated);
+                    setSaveSuccess(true);
+                    setTimeout(() => setSaveSuccess(false), 2000);
+                  }}
                   className="px-2.5 py-2.5 bg-red-950/40 hover:bg-red-900/50 text-red-300 text-xs font-semibold rounded-xl border border-red-800/50 cursor-pointer transition-all"
                   title="Reset to default logo"
                 >
@@ -443,7 +537,7 @@ export const ControlPanelScreen: React.FC<ControlPanelScreenProps> = ({
                 Login Logo (Marked White Area):
               </span>
               <span className="text-[10px] text-neutral-400">
-                Shown at top of Login Screen
+                Shown above 'Log In to Absher'
               </span>
             </div>
 
@@ -470,17 +564,21 @@ export const ControlPanelScreen: React.FC<ControlPanelScreenProps> = ({
                 onChange={(e) =>
                   handleImageUpload(e, (base64) => {
                     handleLoginConfigChange('logoImage', base64);
-                    setFormData((prev) => ({
-                      ...prev,
-                      visuals: { ...prev.visuals, loginScreenImage: base64 },
+                    const updated = {
+                      ...formData,
+                      visuals: { ...formData.visuals, loginScreenImage: base64 },
                       loginConfig: {
-                        username: prev.loginConfig?.username || prev.personalDetails.idNumber || '2602801801',
-                        password: prev.loginConfig?.password || 'Ayat007007',
-                        otpMobile: prev.loginConfig?.otpMobile || '*****5773',
-                        ...prev.loginConfig,
+                        username: formData.loginConfig?.username || formData.personalDetails.idNumber || '2502740083',
+                        password: formData.loginConfig?.password || 'Aa123456',
+                        otpMobile: formData.loginConfig?.otpMobile || '*****5773',
+                        ...formData.loginConfig,
                         logoImage: base64,
                       },
-                    }));
+                    };
+                    setFormData(updated);
+                    onSave(updated);
+                    setSaveSuccess(true);
+                    setTimeout(() => setSaveSuccess(false), 2000);
                   })
                 }
               />
@@ -499,17 +597,21 @@ export const ControlPanelScreen: React.FC<ControlPanelScreenProps> = ({
                     type="button"
                     onClick={() => {
                       handleLoginConfigChange('logoImage', '');
-                      setFormData((prev) => ({
-                        ...prev,
-                        visuals: { ...prev.visuals, loginScreenImage: '' },
+                      const updated = {
+                        ...formData,
+                        visuals: { ...formData.visuals, loginScreenImage: '' },
                         loginConfig: {
-                          username: prev.loginConfig?.username || prev.personalDetails.idNumber || '2502740083',
-                          password: prev.loginConfig?.password || 'Aa123456',
-                          otpMobile: prev.loginConfig?.otpMobile || '*****5773',
-                          ...prev.loginConfig,
+                          username: formData.loginConfig?.username || formData.personalDetails.idNumber || '2502740083',
+                          password: formData.loginConfig?.password || 'Aa123456',
+                          otpMobile: formData.loginConfig?.otpMobile || '*****5773',
+                          ...formData.loginConfig,
                           logoImage: '',
                         },
-                      }));
+                      };
+                      setFormData(updated);
+                      onSave(updated);
+                      setSaveSuccess(true);
+                      setTimeout(() => setSaveSuccess(false), 2000);
                     }}
                     className="px-2.5 py-2 bg-red-950/40 hover:bg-red-900/50 text-red-300 text-xs font-semibold rounded-xl border border-red-800/50 cursor-pointer transition-all"
                   >
@@ -608,21 +710,47 @@ export const ControlPanelScreen: React.FC<ControlPanelScreenProps> = ({
               accept="image/*"
               className="hidden"
               onChange={(e) =>
-                handleImageUpload(e, (base64) =>
-                  setFormData((prev) => ({
-                    ...prev,
-                    visuals: { ...prev.visuals, profilePhoto: base64 },
-                  }))
-                )
+                handleImageUpload(e, (base64) => {
+                  const updated = {
+                    ...formData,
+                    visuals: { ...formData.visuals, profilePhoto: base64 },
+                  };
+                  setFormData(updated);
+                  onSave(updated);
+                  setSaveSuccess(true);
+                  setTimeout(() => setSaveSuccess(false), 2000);
+                })
               }
             />
-            <button
-              onClick={() => profileInputRef.current?.click()}
-              className="px-4 py-2.5 bg-[#25282c] hover:bg-[#2e3238] text-neutral-200 text-xs font-semibold rounded-xl flex items-center gap-2 border border-neutral-700/60 cursor-pointer shadow-sm active:scale-95 transition-all"
-            >
-              <Upload className="w-4 h-4" />
-              <span>Upload Photo</span>
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => profileInputRef.current?.click()}
+                className="px-4 py-2.5 bg-[#25282c] hover:bg-[#2e3238] text-neutral-200 text-xs font-semibold rounded-xl flex items-center gap-2 border border-neutral-700/60 cursor-pointer shadow-sm active:scale-95 transition-all"
+              >
+                <Upload className="w-4 h-4 text-[#7BE4C2]" />
+                <span>{formData.visuals.profilePhoto ? 'Change Photo' : 'Upload Photo'}</span>
+              </button>
+              {formData.visuals.profilePhoto && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    const updated = {
+                      ...formData,
+                      visuals: { ...formData.visuals, profilePhoto: '' },
+                    };
+                    setFormData(updated);
+                    onSave(updated);
+                    setSaveSuccess(true);
+                    setTimeout(() => setSaveSuccess(false), 2000);
+                  }}
+                  className="px-2.5 py-2.5 bg-red-950/40 hover:bg-red-900/50 text-red-300 text-xs font-semibold rounded-xl border border-red-800/50 cursor-pointer transition-all"
+                  title="Remove profile photo"
+                >
+                  Remove
+                </button>
+              )}
+            </div>
           </div>
         </div>
 
@@ -793,14 +921,18 @@ export const ControlPanelScreen: React.FC<ControlPanelScreenProps> = ({
                           value={doc.extra?.version || '1'}
                           onChange={(e) => {
                             const val = e.target.value;
-                            setFormData((prev) => ({
-                              ...prev,
-                              documents: prev.documents.map((d) =>
-                                d.id === doc.id
-                                  ? { ...d, extra: { ...d.extra, version: val } }
-                                  : d
-                              ),
-                            }));
+                            setFormData((prev) => {
+                              const updated = {
+                                ...prev,
+                                documents: prev.documents.map((d) =>
+                                  d.id === doc.id
+                                    ? { ...d, extra: { ...d.extra, version: val } }
+                                    : d
+                                ),
+                              };
+                              onSave(updated);
+                              return updated;
+                            });
                           }}
                           className="w-full bg-[#17181a] border border-neutral-700/80 rounded-xl px-2.5 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none"
                           placeholder="1"
@@ -829,81 +961,167 @@ export const ControlPanelScreen: React.FC<ControlPanelScreenProps> = ({
                         />
                       </div>
                     </div>
-                    <div className="text-[11px] text-neutral-400 bg-[#141517] p-2.5 rounded-xl border border-neutral-800">
-                      ℹ️ On your <strong>My Profile</strong> page, My Resident ID shows strictly these 4 details (Resident ID Number, ID Version, Issuing Date, Expiry Date).
-                    </div>
                   </div>
                 ) : (
-                  <>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-neutral-400">Number</label>
-                        <input
-                          type="text"
-                          value={doc.number}
-                          onChange={(e) => handleDocumentChange(doc.id, 'number', e.target.value)}
-                          className="w-full bg-[#17181a] border border-neutral-700/80 rounded-xl px-2.5 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none"
-                        />
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-neutral-400">Issuing</label>
-                        <input
-                          type="text"
-                          value={doc.issuing}
-                          onChange={(e) => handleDocumentChange(doc.id, 'issuing', e.target.value)}
-                          className="w-full bg-[#17181a] border border-neutral-700/80 rounded-xl px-2.5 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none"
-                        />
-                      </div>
-
-                      <div className="flex flex-col gap-1">
-                        <label className="text-[11px] text-neutral-400">Expiry</label>
-                        <input
-                          type="text"
-                          value={doc.expiry}
-                          onChange={(e) => handleDocumentChange(doc.id, 'expiry', e.target.value)}
-                          className="w-full bg-[#17181a] border border-neutral-700/80 rounded-xl px-2.5 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none"
-                        />
-                      </div>
-                    </div>
-
-                    {/* Image upload row: "No img" + "Upload" */}
-                    <div className="flex items-center gap-3 pt-1">
-                      <div className="w-16 h-12 rounded-lg bg-[#151618] border border-neutral-700 flex items-center justify-center overflow-hidden shrink-0">
-                        {doc.image ? (
-                          <img src={doc.image} alt={doc.title} className="w-full h-full object-cover" />
-                        ) : (
-                          <span className="text-[10px] text-neutral-500">No img</span>
-                        )}
-                      </div>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] text-neutral-400">Number</label>
                       <input
-                        type="file"
-                        ref={(el) => {
-                          docInputRefs.current[doc.id] = el;
-                        }}
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) =>
-                          handleImageUpload(e, (base64) =>
-                            setFormData((prev) => ({
-                              ...prev,
-                              documents: prev.documents.map((d) =>
-                                d.id === doc.id ? { ...d, image: base64 } : d
-                              ),
-                            }))
-                          )
-                        }
+                        type="text"
+                        value={doc.number}
+                        onChange={(e) => handleDocumentChange(doc.id, 'number', e.target.value)}
+                        className="w-full bg-[#17181a] border border-neutral-700/80 rounded-xl px-2.5 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none"
                       />
-                      <button
-                        onClick={() => docInputRefs.current[doc.id]?.click()}
-                        className="px-3.5 py-2 bg-[#25282c] hover:bg-[#2e3238] text-neutral-200 text-xs font-semibold rounded-xl flex items-center gap-2 border border-neutral-700/60 cursor-pointer active:scale-95 transition-all"
-                      >
-                        <Upload className="w-3.5 h-3.5" />
-                        <span>Upload</span>
-                      </button>
                     </div>
-                  </>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] text-neutral-400">Issuing</label>
+                      <input
+                        type="text"
+                        value={doc.issuing}
+                        onChange={(e) => handleDocumentChange(doc.id, 'issuing', e.target.value)}
+                        className="w-full bg-[#17181a] border border-neutral-700/80 rounded-xl px-2.5 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+
+                    <div className="flex flex-col gap-1">
+                      <label className="text-[11px] text-neutral-400">Expiry</label>
+                      <input
+                        type="text"
+                        value={doc.expiry}
+                        onChange={(e) => handleDocumentChange(doc.id, 'expiry', e.target.value)}
+                        className="w-full bg-[#17181a] border border-neutral-700/80 rounded-xl px-2.5 py-2 text-xs text-white font-mono focus:border-emerald-500 focus:outline-none"
+                      />
+                    </div>
+                  </div>
                 )}
+
+                {/* Unified Offline Document Scan & Photo Upload Section for ALL documents */}
+                <div
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    setDragOverDocId(doc.id);
+                  }}
+                  onDragLeave={() => setDragOverDocId(null)}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    setDragOverDocId(null);
+                    const file = e.dataTransfer.files?.[0];
+                    if (file) {
+                      processAndSaveDocImage(doc.id, file);
+                    }
+                  }}
+                  className={`mt-1 p-2.5 rounded-xl border transition-all ${
+                    dragOverDocId === doc.id
+                      ? 'bg-emerald-950/40 border-emerald-500'
+                      : 'bg-[#151619] border-neutral-800'
+                  } flex flex-col gap-2`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-[11px] text-neutral-300 font-semibold flex items-center gap-1.5">
+                      <ImageIcon className="w-3.5 h-3.5 text-[#7BE4C2]" />
+                      <span>Document Scan / Attached Photo:</span>
+                    </span>
+                    {doc.image && (
+                      <span className="text-[10px] text-emerald-400 bg-emerald-950/60 border border-emerald-800/60 px-2 py-0.5 rounded-full flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        <span>Offline Saved</span>
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    {/* Thumbnail preview */}
+                    <div
+                      onClick={() => {
+                        if (doc.image) {
+                          setPreviewModalImage({ src: doc.image, title: doc.title });
+                        } else {
+                          docInputRefs.current[doc.id]?.click();
+                        }
+                      }}
+                      className="w-20 h-14 rounded-lg bg-[#0e0f11] border border-neutral-700/70 flex items-center justify-center overflow-hidden shrink-0 cursor-pointer relative group hover:border-[#7BE4C2] transition-colors"
+                      title={doc.image ? 'Click to view full photo' : 'Click to upload'}
+                    >
+                      {uploadingDocId === doc.id ? (
+                        <div className="flex flex-col items-center justify-center gap-1 text-emerald-400">
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          <span className="text-[8px]">Saving...</span>
+                        </div>
+                      ) : doc.image ? (
+                        <>
+                          <img
+                            src={doc.image}
+                            alt={doc.title}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                          />
+                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                            <Eye className="w-4 h-4 text-white" />
+                          </div>
+                        </>
+                      ) : (
+                        <div className="flex flex-col items-center justify-center text-neutral-500 gap-0.5">
+                          <Upload className="w-3.5 h-3.5 text-neutral-400" />
+                          <span className="text-[9px]">No photo</span>
+                        </div>
+                      )}
+                    </div>
+
+                    <input
+                      type="file"
+                      ref={(el) => {
+                        docInputRefs.current[doc.id] = el;
+                      }}
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          processAndSaveDocImage(doc.id, file);
+                        }
+                        e.target.value = '';
+                      }}
+                    />
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => docInputRefs.current[doc.id]?.click()}
+                        disabled={uploadingDocId === doc.id}
+                        className="px-3 py-1.5 bg-[#25282c] hover:bg-[#2e3238] active:bg-[#34383f] text-neutral-200 text-xs font-semibold rounded-xl flex items-center gap-1.5 border border-neutral-700/60 cursor-pointer active:scale-95 transition-all shadow-xs"
+                      >
+                        {uploadingDocId === doc.id ? (
+                          <Loader2 className="w-3.5 h-3.5 animate-spin text-emerald-400" />
+                        ) : (
+                          <Upload className="w-3.5 h-3.5 text-[#7BE4C2]" />
+                        )}
+                        <span>{doc.image ? 'Replace Photo' : 'Upload Document Photo'}</span>
+                      </button>
+
+                      {doc.image && (
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setPreviewModalImage({ src: doc.image!, title: doc.title })}
+                            className="px-2.5 py-1.5 bg-[#1b1d20] hover:bg-[#24272c] text-neutral-300 text-xs rounded-xl flex items-center gap-1 border border-neutral-700/50 cursor-pointer active:scale-95 transition-all"
+                          >
+                            <Eye className="w-3.5 h-3.5 text-neutral-400" />
+                            <span>View</span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveDocImage(doc.id)}
+                            className="px-2.5 py-1.5 bg-red-950/40 hover:bg-red-900/50 text-red-300 text-xs rounded-xl flex items-center gap-1 border border-red-800/40 cursor-pointer active:scale-95 transition-all"
+                            title="Remove attached photo"
+                          >
+                            <Trash2 className="w-3.5 h-3.5" />
+                            <span>Remove</span>
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             ))}
           </div>
@@ -961,6 +1179,58 @@ export const ControlPanelScreen: React.FC<ControlPanelScreenProps> = ({
           >
             <RotateCcw className="w-3 h-3" />
             <span>Reset to Initial Screenshot Data</span>
+          </button>
+        </div>
+
+        {/* Updated APK Installation Card */}
+        <div className="mt-2 p-4 rounded-2xl bg-gradient-to-r from-emerald-950/70 to-[#1e2024] border border-[#7BE4C2]/40 flex flex-col gap-2.5 shadow-md">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-[#7BE4C2]" />
+              <span className="text-xs font-bold text-white">Updated APK Ready to Install</span>
+            </div>
+            <span className="text-[10px] text-emerald-300 font-mono bg-emerald-900/60 px-2 py-0.5 rounded-full border border-emerald-700/50">
+              v1+v2+v3 Signed
+            </span>
+          </div>
+          <p className="text-[11px] text-neutral-300">
+            All recent modifications, offline document uploads, and photo compressions are compiled directly into the default APK file.
+          </p>
+          <button
+            type="button"
+            id="cp-download-apk-link"
+            onClick={() => {
+              try {
+                if (EMBEDDED_APK_BASE64 && EMBEDDED_APK_BASE64.length > 1000) {
+                  const byteCharacters = atob(EMBEDDED_APK_BASE64);
+                  const byteNumbers = new Array(byteCharacters.length);
+                  for (let i = 0; i < byteCharacters.length; i++) {
+                    byteNumbers[i] = byteCharacters.charCodeAt(i);
+                  }
+                  const byteArray = new Uint8Array(byteNumbers);
+                  const apkBlob = new Blob([byteArray], { type: 'application/vnd.android.package-archive' });
+                  const blobUrl = window.URL.createObjectURL(apkBlob);
+                  const a = document.createElement('a');
+                  a.style.display = 'none';
+                  a.href = blobUrl;
+                  a.download = 'app-debug.apk';
+                  document.body.appendChild(a);
+                  a.click();
+                  setTimeout(() => {
+                    document.body.removeChild(a);
+                    window.URL.revokeObjectURL(blobUrl);
+                  }, 3000);
+                  return;
+                }
+              } catch (e) {
+                console.error(e);
+              }
+              window.location.href = '/download/app-debug.apk';
+            }}
+            className="py-2.5 px-3 bg-[#008744] hover:bg-[#007038] active:bg-[#005a2e] text-white text-xs font-bold rounded-xl flex items-center justify-center gap-2 cursor-pointer shadow-md transition-all active:scale-98"
+          >
+            <Download className="w-4 h-4 text-white" />
+            <span>Download Updated APK (436 KB)</span>
           </button>
         </div>
       </div>
@@ -1036,6 +1306,41 @@ export const ControlPanelScreen: React.FC<ControlPanelScreenProps> = ({
                 className="flex-1 py-2.5 bg-[#006837] hover:bg-[#00522c] text-white text-xs font-semibold rounded-xl transition-colors cursor-pointer"
               >
                 Save Password
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Full-view Document Image Modal */}
+      {previewModalImage && (
+        <div className="fixed inset-0 bg-black/80 backdrop-blur-xs flex items-center justify-center p-4 z-50 animate-fade-in">
+          <div className="w-full max-w-md bg-[#1e2024] border border-neutral-700 rounded-3xl p-4 shadow-2xl flex flex-col gap-3">
+            <div className="flex items-center justify-between border-b border-neutral-800 pb-2.5">
+              <span className="text-sm font-bold text-white flex items-center gap-1.5">
+                <FileCheck className="w-4 h-4 text-[#7BE4C2]" />
+                <span>{previewModalImage.title}</span>
+              </span>
+              <button
+                onClick={() => setPreviewModalImage(null)}
+                className="p-1 rounded-lg hover:bg-neutral-800 text-neutral-400 hover:text-white cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="max-h-[70vh] overflow-auto rounded-xl bg-black/40 flex items-center justify-center p-1">
+              <img
+                src={previewModalImage.src}
+                alt={previewModalImage.title}
+                className="max-w-full max-h-[65vh] object-contain rounded-lg shadow-md"
+              />
+            </div>
+            <div className="flex justify-end pt-1">
+              <button
+                onClick={() => setPreviewModalImage(null)}
+                className="px-4 py-2 bg-neutral-800 hover:bg-neutral-700 text-neutral-200 text-xs font-semibold rounded-xl cursor-pointer"
+              >
+                Close Preview
               </button>
             </div>
           </div>

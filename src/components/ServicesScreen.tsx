@@ -148,18 +148,8 @@ export const ServicesScreen: React.FC<ServicesScreenProps> = ({ onNavigate }) =>
           </div>
         </div>
 
-        {/* Right: Settings & Notifications */}
+        {/* Right: Notifications */}
         <div className="flex items-center gap-3">
-          <button
-            onClick={() => onNavigate('control_panel')}
-            className="p-1.5 rounded-full text-white hover:bg-white/10 transition-colors cursor-pointer relative"
-            title="Settings"
-          >
-            <Settings className="w-5 h-5" />
-            <span className="absolute -top-0.5 -right-0.5 w-3 h-3 bg-amber-500 text-black rounded-full flex items-center justify-center text-[7px] font-black shadow">
-              <Lock className="w-1.5 h-1.5 stroke-[3]" />
-            </span>
-          </button>
           <button
             onClick={() => setActiveNotice('All government digital service connections verified offline.')}
             className="p-1.5 rounded-full text-white hover:bg-white/10 transition-colors cursor-pointer"

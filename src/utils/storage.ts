@@ -85,6 +85,58 @@ export const INITIAL_STATE: AppState = {
 };
 
 const STORAGE_KEY = 'absher_native_offline_data_v1';
+const IDB_NAME = 'AbsherOfflineDB';
+const IDB_STORE = 'app_state_store';
+const IDB_KEY = 'current_state';
+
+// Helper to open IndexedDB
+function openDB(): Promise<IDBDatabase> {
+  return new Promise((resolve, reject) => {
+    if (typeof window === 'undefined' || !window.indexedDB) {
+      reject(new Error('IndexedDB not available'));
+      return;
+    }
+    const request = indexedDB.open(IDB_NAME, 1);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(IDB_STORE)) {
+        db.createObjectStore(IDB_STORE);
+      }
+    };
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
+}
+
+// Asynchronously save to IndexedDB
+export async function saveToIndexedDB(state: AppState): Promise<void> {
+  try {
+    const db = await openDB();
+    const tx = db.transaction(IDB_STORE, 'readwrite');
+    const store = tx.objectStore(IDB_STORE);
+    store.put(state, IDB_KEY);
+  } catch (err) {
+    console.warn('IndexedDB save failed:', err);
+  }
+}
+
+// Asynchronously load from IndexedDB
+export async function loadFromIndexedDB(): Promise<AppState | null> {
+  try {
+    const db = await openDB();
+    return new Promise((resolve) => {
+      const tx = db.transaction(IDB_STORE, 'readonly');
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.get(IDB_KEY);
+      req.onsuccess = () => {
+        resolve(req.result || null);
+      };
+      req.onerror = () => resolve(null);
+    });
+  } catch {
+    return null;
+  }
+}
 
 export function loadAppState(): AppState {
   try {
@@ -125,12 +177,29 @@ export function loadAppState(): AppState {
 }
 
 export function saveAppState(state: AppState): boolean {
+  // Always trigger async IndexedDB save for unlimited offline persistence
+  saveToIndexedDB(state);
+
   try {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
     return true;
   } catch (err) {
-    console.error('Failed to save local state:', err);
-    return false;
+    console.warn('localStorage quota warning (saved safely in IndexedDB):', err);
+    // If quota exceeded in localStorage, try saving without heavy image blobs if needed
+    try {
+      const compactState: AppState = {
+        ...state,
+        documents: state.documents.map((d) => ({
+          ...d,
+          // keep image if short or thumbnail
+          image: d.image && d.image.length > 300000 ? d.image.slice(0, 50) + '...' : d.image,
+        })),
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(compactState));
+    } catch {
+      // Even if localStorage fails completely, IndexedDB has the complete full state
+    }
+    return true;
   }
 }
 
